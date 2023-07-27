@@ -1,0 +1,40 @@
+name: Deploy to GitHub Pages
+env:
+  PUBLISH_DIR: bin/Release/net7.0/publish/wwwroot
+
+# Run workflow on every push to the master branch
+on:
+  push:
+    branches: [ master ]
+  
+jobs:
+  deploy-to-github-pages:
+    # use ubuntu-latest image to run steps on
+    runs-on: ubuntu-latest
+    steps:
+    # uses GitHub's checkout action to checkout code form the master branch
+    - uses: actions/checkout@v2
+    # install node_modules
+    - name: install node modules
+      uses: tecolicom/actions-install-node-modules@v1.2
+    # publishes Blazor project to the release-folder
+    - name: Publish .NET Core Project
+      run: dotnet publish -c Release -p PublishTrimmed=false
+    - name: Rewrite base href
+      uses: SteveSandersonMS/ghaction-rewrite-base-href@v1
+      with:
+        html_path: ${{ env.PUBLISH_DIR }}/index.html
+        base_href: /
+    - name: Create file 
+      uses: "finnp/create-file-action@master"
+      env:
+        FILE_NAME: "bin/Release/net7.0/publish/wwwroot/.nojekyll"
+        FILE_DATA: ""
+    - name: GitHub Pages
+      if: success()
+      uses: crazy-max/ghaction-github-pages@v1.5.1
+      with:
+        target_branch: gh-pages
+        build_dir: ${{ env.PUBLISH_DIR }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
